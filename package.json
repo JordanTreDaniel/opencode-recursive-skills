@@ -1,0 +1,31 @@
+{
+  "name": "opencode-recursive-skills",
+  "version": "0.1.0",
+  "description": "Recursive skill file listings for OpenCode — replaces the 10-file cap in the skill tool's <skill_files> block with a full recursive listing.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "skills",
+    "recursive",
+    "ai-agent"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JordanTreDaniel/opencode-recursive-skills.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@opencode/plugin": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
+  }
+}
