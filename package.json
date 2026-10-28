@@ -22,7 +22,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@opencode/plugin": "latest"
+    "@opencode/plugin": "^2.2.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
