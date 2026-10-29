@@ -1,0 +1,44 @@
+# ─── npm Trusted Publisher setup (attach ONCE on npmjs.com BEFORE pushing the first tag) ───
+# Path: npmjs.com -> Packages -> opencode-recursive-skills -> Settings -> Trusted publishing
+#   -> Add trusted publisher -> GitHub Actions:
+#     Organization or user:  JordanTreDaniel
+#     Repository:            opencode-recursive-skills
+#     Workflow filename:     publish.yml   (filename only, .yml extension required, case-sensitive)
+#     Allowed actions:       CHECK "npm publish" — configs created after Sep 3 2026 default to
+#                            stage-only, and this workflow runs `npm publish`, so it FAILS
+#                            unless npm publish is explicitly allowed at creation time.
+#
+# POLICY (docs.npmjs.com/trusted-publishers):
+# - "Configurations created after Sep 03, 2026 are automatically set to allow npm stage
+#    publish, and you can choose whether to also permit direct publishing with npm publish."
+# - "A newly created trusted publisher configuration must complete its first successful
+#    publish within 2 days... If the configuration is not validated within 2 days, it
+#    expires and can no longer be used or edited." (Configs cannot be edited after creation
+#    — delete and recreate.)
+# - Provenance is automatic via OIDC: "you don't need to add the --provenance flag."
+# - Requires npm >= 11.5.1 and Node >= 22.14.0 (Node 24 bundles npm 11.x — satisfied).
+# - All trusted-publisher fields are case-sensitive and exact.
+# - package.json "repository.url" must exactly match the GitHub repo URL.
+name: Publish to npm
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # required for OIDC — npm CLI detects it and self-authenticates; no token secret
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest   # GitHub-hosted only; self-hosted runners unsupported by npm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'             # resolves latest v24.x, bundles npm >= 11.5.1
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false   # never use caching in release builds
+      - run: npm ci
+      - run: npm run build --if-present
+      - run: npm publish                 # OIDC-authenticated; provenance automatic
