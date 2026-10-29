@@ -41,14 +41,4 @@ jobs:
           package-manager-cache: false   # never use caching in release builds
       - run: npm ci
       - run: npm run build --if-present
-      - name: Diagnose OIDC env (TEMP)
-        run: |
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL: ${ACTIONS_ID_TOKEN_REQUEST_URL:+SET}${ACTIONS_ID_TOKEN_REQUEST_URL:-MISSING}"
-          echo "NODE_AUTH_TOKEN: ${NODE_AUTH_TOKEN:+SET}${NODE_AUTH_TOKEN:-MISSING}"
-          echo "NPM_CONFIG_USERCONFIG: ${NPM_CONFIG_USERCONFIG:-unset}"
-          for f in "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"; do
-            echo "--- $f (token redacted) ---"
-            sed 's/_authToken=.*/_authToken=<REDACTED>/' "$f" 2>/dev/null || echo "(not readable)"
-          done
-          npm --version
-      - run: npm publish --loglevel verbose   # TEMP verbose for OIDC diagnosis
+      - run: npm publish                 # OIDC-authenticated; provenance automatic
