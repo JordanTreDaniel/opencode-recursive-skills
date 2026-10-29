@@ -1,0 +1,35 @@
+# TEMPORARY diagnostic — dumps the OIDC claims GitHub would issue for npm trusted
+# publishing, so they can be compared field-by-field against the trusted-publisher
+# config on npmjs.com (owner / repo / workflow filename / environment).
+# workflow_dispatch only; never triggers on push. Delete after diagnosis.
+name: OIDC claims debug
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  claims:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump OIDC claims (payload only — signature/token never printed)
+        run: |
+          set -euo pipefail
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+            echo "OIDC env vars NOT present — id-token: write not in effect"
+            exit 1
+          fi
+          echo "OIDC env vars present. Requesting token (claims printed, token withheld)..."
+          curl -sS -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}" > /tmp/oidc.json
+          python3 - <<'PY'
+          import json, base64
+          d = json.load(open('/tmp/oidc.json'))
+          value = d['value']
+          payload = value.split('.')[1]
+          payload += '=' * (-len(payload) % 4)
+          claims = json.loads(base64.urlsafe_b64decode(payload))
+          print(json.dumps(claims, indent=2, sort_keys=True))
+          PY
