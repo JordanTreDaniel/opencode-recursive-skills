@@ -21,6 +21,9 @@ import path from "node:path"
 /** Safety cap — skills are small; this bounds pathological cases. */
 const DEFAULT_MAX_FILES = 500
 
+/** Dependency/VCS trees are never part of a skill's own file list. */
+const SKIP_DIRS = new Set(["node_modules", ".git"])
+
 interface RecursiveSkillsOptions {
   /** Max files to list (default 500). */
   maxFiles?: number
@@ -53,6 +56,7 @@ function walk(dir: string, maxFiles: number, out: string[] = []): string[] {
       continue
     }
     if (stat.isDirectory()) {
+      if (SKIP_DIRS.has(entry.name)) continue // deps/VCS: 1168/1374 files were node_modules — they ate maxFiles and hid every INDEX.md
       walk(real, maxFiles, out)
     } else if (stat.isFile()) {
       out.push(real) // stored path is always the realpath
@@ -83,6 +87,21 @@ function skillDirectory(event: { result?: { metadata?: Record<string, unknown> }
   return undefined
 }
 
+/** NOTE pointing at INDEX.md routing tables found in the listing (empty string when none). */
+function indexNote(directory: string, files: string[], content: string): string {
+  if (content.includes("NOTE: INDEX.md found:")) return "" // idempotence — transforms re-run; NOTE must appear once
+  let root = directory
+  try {
+    root = fs.realpathSync(directory) // walk() emits realpaths — match them so relative() isn't "../../.."
+  } catch {}
+  const idx = files
+    .filter((f) => path.basename(f) === "INDEX.md")
+    .slice(0, 3) // ≤3, relative to dir; none → "" (never point at a missing file)
+    .map((f) => path.relative(root, f))
+  if (idx.length === 0) return ""
+  return `\nNOTE: INDEX.md found: ${idx.join(", ")} — read it next; it is the routing table, follow it to the target sub-skill instead of searching broadly.`
+}
+
 /** Build the recursive-list block and splice it into the content. */
 function rewrite(content: string, directory: string | undefined, maxFiles: number): string {
   if (!directory) {
@@ -93,7 +112,7 @@ function rewrite(content: string, directory: string | undefined, maxFiles: numbe
   const lines = files.map((file) => `<file>${file}</file>`)
   const capped = files.length >= maxFiles ? ` (capped at ${maxFiles})` : ""
   const block = [`<!-- recursive-skills: recursive list (${files.length} files${capped}) -->`, ...lines].join("\n")
-  return splice(content, block)
+  return splice(content, block + indexNote(directory, files, content)) // shared helper → byte-identical NOTE line
 }
 
 function envFlag(name: string): boolean {
